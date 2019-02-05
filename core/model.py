@@ -7,6 +7,8 @@ from core.utils import Timer
 from keras.layers import Dense, Activation, Dropout, LSTM
 from keras.models import Sequential, load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from reshaped_data import reshape_data
+from to_surpervised import to_surpervised
 
 
 class Model():
@@ -43,28 +45,31 @@ class Model():
         print('[Model] Model Compiled')
         timer.stop()
 
-    def train(self, x, y, epochs, batch_size, save_dir):
+    def train(self, x, y, x_test, y_test, epochs, batch_size, save_dir):
         timer = Timer()
+        # data = reshape_data(scaler.transform(data_train))
+        # x, y = to_surpervised(data)
         timer.start()
         print('[Model] Training Started')
         print('[Model] %s epochs, %s batch size' % (epochs, batch_size))
-
         save_fname = os.path.join(save_dir, '%s-e%s.h5' % (dt.datetime.now().strftime('%d%m%Y-%H%M%S'), str(epochs)))
         callbacks = [
             EarlyStopping(monitor='val_loss', patience=2),
             ModelCheckpoint(filepath=save_fname, monitor='val_loss', save_best_only=True)
         ]
-        self.model.fit(
+        history = self.model.fit(
             x,
             y,
             epochs=epochs,
             batch_size=batch_size,
+            validation_data=(x_test, y_test),
             callbacks=callbacks
         )
         self.model.save(save_fname)
 
         print('[Model] Training Completed. Model saved as %s' % save_fname)
         timer.stop()
+        return history
 
     def train_generator(self, data_gen, epochs, batch_size, steps_per_epoch, save_dir):
         timer = Timer()
@@ -91,7 +96,6 @@ class Model():
         # Predict each timestep given the last sequence of true data, in effect only predicting 1 step ahead each time
         print('[Model] Predicting Point-by-Point...')
         predicted = self.model.predict(data)
-        predicted = np.reshape(predicted, (predicted.size,))
         return predicted
 
     def predict_sequences_multiple(self, data, window_size, prediction_len):
@@ -114,7 +118,14 @@ class Model():
         curr_frame = data[0]
         predicted = []
         for i in range(len(data)):
-            predicted.append(self.model.predict(curr_frame[newaxis, :, :])[0, 0])
+            current = curr_frame[newaxis, :, :]
+            output = self.model.predict(current)
+            predicted.append(output[0, 0])
+            # predicted.append(self.model.predict(curr_frame[newaxis, :, :])[0, 0])
             curr_frame = curr_frame[1:]
-            curr_frame = np.insert(curr_frame, [window_size - 2], predicted[-1], axis=0)
+            #should change to a better way
+            new_element = data[i+1][-1] if i+1 != len(data) else data[i][-1]
+            new_element[0] = output
+            curr_frame = np.insert(curr_frame, [window_size - 2], new_element, axis=0)
+        predicted = np.reshape(predicted, (len(predicted), 1))
         return predicted
