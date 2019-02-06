@@ -24,15 +24,16 @@ import math
 # quantiles = [0.5, 0.9]
 input_size = 20
 hidden_size = 100
-number_layer = 2
+number_layer = 1
 # output_layer = len(quantiles)
 batch_size = 32
-epoch = 10
-input_layer = 24
-output_layer = 1
+epoch = 50
+input_layer = 48
+output_layer = 24
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_loss = []
 validation_loss = []
+loss_function = torch.nn.MSELoss()
 
 
 def plot_results(predicted_data, true_data):
@@ -58,7 +59,6 @@ def plot_results_multiple(predicted_data, true_data, prediction_len):
 
 # pytorch lstm train the model
 def train(model, x, y, x_v, y_v, optimizer, batch_size, epoch):
-    loss_function = torch.nn.MSELoss()
     for e in range(1, epoch + 1):
         len_batch = math.ceil(x.size(0) / batch_size)
         losses = []
@@ -81,19 +81,20 @@ def train(model, x, y, x_v, y_v, optimizer, batch_size, epoch):
             optimizer.step()
             if batch_idx % 10 == 0:
                 print('Epoch:{} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(e,
-                                                                  batch_idx * batch_size, x.size(0),
-                                                                  100. * batch_idx / len_batch, loss.item()))
+                                                                        batch_idx * batch_size, x.size(0),
+                                                                        100. * batch_idx / len_batch, loss.item()))
         train_loss.append(np.mean(losses))
         losses.clear()
         pred = validation(model, x_v)
-        y_v= torch.tensor(y_v, dtype=torch.float32).to(device)
+        # y_v= torch.tensor(y_v, dtype=torch.float32).to(device)
         los = loss_function(pred, y_v)
         validation_loss.append(los)
-        print('Epoch:{} train loss:{}, validation loss:{}'.format(e, train_loss[e-1], validation_loss[e-1]))
+        print('Epoch:{} train loss:{}, validation loss:{}'.format(e, train_loss[e - 1], validation_loss[e - 1]))
+        # print('Epoch:{} train loss:{}'.format(e, train_loss[e-1]))
 
-            # if batch_idx % 10 == 0:
-            #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-            #         e, batch_idx * len(x), len(x), 100. * batch_idx / len(x), loss.item()))
+        # if batch_idx % 10 == 0:
+        #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+        #         e, batch_idx * len(x), len(x), 100. * batch_idx / len(x), loss.item()))
 
 
 # pytorch lstm validate the result
@@ -113,6 +114,7 @@ def validation(model, x):
 
     # return np.reshape(np.asarray(predicted), (655,))
     return p
+
 
 def main():
     configs = json.load(open('config.json', 'r'))
@@ -146,6 +148,7 @@ def main():
     x_validation, y_validation = to_surpervised(validation_data, input_layer, output_layer, 'validation')
     x_validation = torch.tensor(x_validation, dtype=torch.float32).to(device)
     y_validation = y_validation.flatten().reshape(-1, 1)
+    y_validation = torch.tensor(y_validation, dtype=torch.float32).to(device)
 
     # '''	# in-memory training
     # history = model.train(
@@ -190,8 +193,8 @@ def main():
     predictions = validation(model, x_validation)
 
     # plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
-    predictions = scaler.inverse_transform(predictions.detach().numpy())
-    y_validation = scaler.inverse_transform(y_validation)
+    predictions = scaler.inverse_transform(predictions.cpu().detach().numpy())
+    y_validation = scaler.inverse_transform(y_validation.cpu().detach().numpy())
     plot_results(predictions, y_validation)
 
 
