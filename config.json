@@ -5,7 +5,7 @@
 			"LOAD"
 		],
 		"sequence_length": 24,
-		"train_test_split": 0.85,
+		"train_test_split": 0.7,
 		"normalise": false
 	},
 	"training": {
