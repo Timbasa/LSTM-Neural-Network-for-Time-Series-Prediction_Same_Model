@@ -9,7 +9,6 @@ import time
 import math
 import matplotlib.pyplot as plt
 from core.data_processor import DataLoader
-from core.model import Model
 import numpy as np
 from core.lstm import LSTM
 import torch
@@ -21,7 +20,7 @@ from to_surpervised import to_surpervised
 from sklearn.preprocessing import MinMaxScaler
 import math
 
-# quantiles = [0.5, 0.9]
+quantiles = [0.5, 0.9]
 input_size = 20
 hidden_size = 100
 number_layer = 1
@@ -140,11 +139,11 @@ def main():
     scaler = MinMaxScaler()
     scaler.fit(data.data_train)
     # transform data inside the train or prediction function
-    train_data = reshape_data(scaler.transform(data.data_train))
+    train_data = reshape_data(scaler.transform(data.data_train), 0)
     x, y = to_surpervised(train_data, input_layer, output_layer, 'train')
     x = torch.tensor(x, dtype=torch.float32).to(device)
     y = torch.tensor(y, dtype=torch.float32).to(device)
-    validation_data = reshape_data(scaler.transform(data.data_test))
+    validation_data = reshape_data(scaler.transform(data.data_test), 1)
     x_validation, y_validation = to_surpervised(validation_data, input_layer, output_layer, 'validation')
     x_validation = torch.tensor(x_validation, dtype=torch.float32).to(device)
     y_validation = y_validation.flatten().reshape(-1, 1)

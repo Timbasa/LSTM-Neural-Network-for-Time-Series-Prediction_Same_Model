@@ -3,8 +3,11 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 
-def reshape_data(data):
-    baseDate = datetime(2009, 10, 1, 1, 00)
+def reshape_data(data, flag=0):
+    if flag == 0:
+        baseDate = datetime(2009, 10, 1, 1, 00)
+    elif flag == 1:
+        baseDate = datetime(2010, 8, 7, 7, 00)
     trend = np.arange(0, len(data), dtype=np.intc)
     date = list(map(lambda x: baseDate + timedelta(hours=np.asscalar(x)), trend))
     weekday = list(map(lambda x: x.weekday(), date))

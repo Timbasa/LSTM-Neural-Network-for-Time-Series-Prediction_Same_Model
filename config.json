@@ -1,6 +1,6 @@
 {
 	"data": {
-		"filename": "L1-train.csv",
+		"filename": "L1-train_one_year.csv",
 		"columns": [
 			"LOAD"
 		],
