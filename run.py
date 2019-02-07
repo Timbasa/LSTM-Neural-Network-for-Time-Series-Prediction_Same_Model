@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from core.data_processor import DataLoader
 import numpy as np
 from core.lstm import LSTM
+from core.quantile_loss import QuantileLoss
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,18 +29,20 @@ number_layer = 1
 batch_size = 32
 epoch = 50
 input_layer = 48
-output_layer = 24
+output_layer = len(quantiles)
+output_size = 24
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_loss = []
 validation_loss = []
-loss_function = torch.nn.MSELoss()
+loss_function = QuantileLoss(quantiles)
 
 
-def plot_results(predicted_data, true_data):
+def plot_results(prediction_list, true_data):
     fig = plt.figure(facecolor='white')
     ax = fig.add_subplot(111)
     ax.plot(true_data, label='True Data')
-    plt.plot(predicted_data, label='Prediction')
+    for i in range(len(prediction_list)):
+        plt.plot(prediction_list[i], label='Prediction')
     plt.legend()
     plt.show()
 
@@ -108,7 +111,7 @@ def validation(model, x):
     # for batch_idx in range(len(x)):
     # x_ind = x[batch_idx]
     # p = model(x_ind).detach().numpy()
-    p = model(x).view(-1, 1)
+    p = model(x).view(-1, 1, output_layer)
     # predicted.append(p)
 
     # return np.reshape(np.asarray(predicted), (655,))
@@ -127,7 +130,7 @@ def main():
     # build the model
     # model = Model()
     # model.build_model(configs)
-    model = LSTM(input_size, hidden_size, number_layer, output_layer).to(device)
+    model = LSTM(input_size, hidden_size, number_layer, output_size, output_layer).to(device)
     optimizor = optim.SGD(model.parameters(), lr=0.1, momentum=0.2)
     # base_value = data.data_train[0]
     # print(base_value)
@@ -139,12 +142,12 @@ def main():
     scaler = MinMaxScaler()
     scaler.fit(data.data_train)
     # transform data inside the train or prediction function
-    train_data = reshape_data(scaler.transform(data.data_train), 0)
-    x, y = to_surpervised(train_data, input_layer, output_layer, 'train')
+    train_data = reshape_data(scaler.transform(data.data_train))
+    x, y = to_surpervised(train_data, input_layer, output_size, 'train')
     x = torch.tensor(x, dtype=torch.float32).to(device)
     y = torch.tensor(y, dtype=torch.float32).to(device)
-    validation_data = reshape_data(scaler.transform(data.data_test), 1)
-    x_validation, y_validation = to_surpervised(validation_data, input_layer, output_layer, 'validation')
+    validation_data = reshape_data(scaler.transform(data.data_test))
+    x_validation, y_validation = to_surpervised(validation_data, input_layer, output_size, 'validation')
     x_validation = torch.tensor(x_validation, dtype=torch.float32).to(device)
     y_validation = y_validation.flatten().reshape(-1, 1)
     y_validation = torch.tensor(y_validation, dtype=torch.float32).to(device)
@@ -192,9 +195,12 @@ def main():
     predictions = validation(model, x_validation)
 
     # plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
-    predictions = scaler.inverse_transform(predictions.cpu().detach().numpy())
+    prediction_list = []
+    for i in range(output_layer):
+        prediction_list.append(scaler.inverse_transform(predictions[:,:,i].cpu().detach().numpy()))
+    # predictions = scaler.inverse_transform(predictions.cpu().detach().numpy())
     y_validation = scaler.inverse_transform(y_validation.cpu().detach().numpy())
-    plot_results(predictions, y_validation)
+    plot_results(prediction_list, y_validation)
 
 
 if __name__ == '__main__':
