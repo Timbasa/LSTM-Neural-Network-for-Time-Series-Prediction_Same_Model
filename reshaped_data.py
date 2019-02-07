@@ -4,9 +4,13 @@ from datetime import datetime, timedelta
 
 def reshape_data(data, flag=0):
     if flag == 0:
-        baseDate = datetime(2009, 10, 1, 1, 00)
+        # one year
+        # baseDate = datetime(2009, 10, 1, 1, 00)
+        baseDate = datetime(2005, 1, 1, 1, 00)
     elif flag == 1:
-        baseDate = datetime(2010, 8, 7, 7, 00)
+        # one year
+        # baseDate = datetime(2010, 8, 7, 7, 00)
+        baseDate = datetime(2009, 1, 9, 8, 00)
     trend = np.arange(0, len(data), dtype=np.intc)
     date = list(map(lambda x: baseDate + timedelta(hours=np.asscalar(x)), trend))
     weekday = list(map(lambda x: x.weekday(), date))
